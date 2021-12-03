@@ -1,4 +1,5 @@
 from collections.abc import Iterable, Mapping
+from distutils.util import strtobool
 from numbers import Real, Integral
 from pathlib import Path
 import shutil
@@ -9,7 +10,7 @@ import numpy as np
 
 import openmc
 import openmc.checkvalue as cv
-from ._xml import clean_indentation, reorder_attributes
+from ._xml import clean_indentation, get_text, reorder_attributes
 from .mixin import IDManagerMixin
 
 
@@ -684,6 +685,67 @@ class Plot(IDManagerMixin):
 
         return element
 
+    @classmethod
+    def from_xml_element(cls, elem):
+        """Generate plot from an XML element
+
+        Parameters
+        ----------
+        elem : xml.etree.ElementTree.Element
+            XML element
+
+        Returns
+        -------
+        openmc.Plot
+            Plot generated from XML element
+
+        """
+
+        plot_id = int(get_text(elem, 'id'))
+        plot = cls(plot_id)
+
+        # try and read/set all string attributes/elements
+        for attr in ["basis", "color_by", "filename", "type"]:
+            val = get_text(elem, attr)
+            if val is not None:
+                setattr(plot, attr, val)
+
+        # try and read/set all int attributes/elements
+        for attr in ["level"]:
+            val = get_text(elem, attr)
+            if val is not None:
+                setattr(plot, attr, int(val))
+
+        # try and read/set all list of floats attributes/elements
+        for attr in ["origin", "width"]:
+            val = get_text(elem, attr)
+            if val is not None:
+                setattr(plot, attr, list(map(float, val.strip().split())))
+
+        # try and read/set all list of ints attributes/elements
+        for attr in ["background", "overlap_color", "pixels"]:
+            val = get_text(elem, attr)
+            if val is not None:
+                setattr(plot, attr, list(map(int, val.strip().split())))
+
+        # try and read/set all boolean attributes/elements
+        for attr in ["show_overlaps"]:
+            val = get_text(elem, attr)
+            if val is not None:
+                setattr(plot, attr, bool(strtobool(val)))
+
+        # TODO color
+        colors = {}
+        for color in elem.findall('color'):
+            color_id = get_text(color, "id")
+            rgb = get_text(color, "rgb")
+            colors[color_id] = rgb
+
+        # TODO mask
+
+        # TODO meshlines
+
+        return plot
     def to_ipython_image(self, openmc_exec='openmc', cwd='.'):
         """Render plot as an image
 
@@ -848,3 +910,28 @@ class Plots(cv.CheckedList):
         reorder_attributes(self._plots_file)  # TODO: Remove when support is Python 3.8+
         tree = ET.ElementTree(self._plots_file)
         tree.write(str(p), xml_declaration=True, encoding='utf-8')
+
+    @classmethod
+    def from_xml(cls, path='plots.xml'):
+        """Generate plots collection from XML file
+
+        Parameters
+        ----------
+        path : str, optional
+            Path to plots XML file
+
+        Returns
+        -------
+        openmc.Plots
+            Plots collection
+
+        """
+        tree = ET.parse(path)
+        root = tree.getroot()
+
+        # Generate each plot
+        plots = cls()
+        for plot in root.findall('plot'):
+            plots.append(Plot.from_xml_element(plot))
+
+        return plots

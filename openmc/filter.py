@@ -16,6 +16,7 @@ from .material import Material
 from .mixin import IDManagerMixin
 from .surface import Surface
 from .universe import UniverseBase
+from ._xml import get_text
 
 
 _FILTER_TYPES = (
@@ -233,6 +234,28 @@ class Filter(IDManagerMixin, metaclass=FilterMeta):
         subelement.text = ' '.join(str(b) for b in self.bins)
 
         return element
+
+    @classmethod
+    def from_xml_element(cls, elem):
+        """Generate Filter from an XML element
+
+        Parameters
+        ----------
+        elem : xml.etree.ElementTree.Element
+            XML element
+
+        Returns
+        -------
+        openmc.Filter
+            Filter generated from XML element
+        """
+        
+        filter_id = int(get_text(elem, "id"))
+        filter_bins = get_text(elem, "bins").strip().split()
+        filter_inst = cls(filter_bins, filter_id)
+
+        return filter_inst
+
 
     def can_merge(self, other):
         """Determine if filter can be merged with another.
@@ -473,6 +496,26 @@ class CellFilter(WithIDFilter):
     """
     expected_type = Cell
 
+    @classmethod
+    def from_xml_element(cls, elem):
+        """Generate Filter from an XML element
+
+        Parameters
+        ----------
+        elem : xml.etree.ElementTree.Element
+            XML element
+
+        Returns
+        -------
+        openmc.Filter
+            Filter generated from XML element
+        """
+        
+        filter_id = int(get_text(elem, "id"))
+        filter_bins = list(map(int, get_text(elem, "bins").strip().split()))
+        filter_inst = cls(filter_bins, filter_id)
+
+        return filter_inst
 
 class CellFromFilter(WithIDFilter):
     """Bins tally on which Cell the neutron came from.
@@ -876,6 +919,30 @@ class MeshFilter(Filter):
         if self.translation is not None:
             element.set('translation', ' '.join(map(str, self.translation)))
         return element
+
+    @classmethod
+    def from_xml_element(cls, elem, meshes):
+        """Generate MeshFilter from an XML element
+
+        Parameters
+        ----------
+        elem : xml.etree.ElementTree.Element
+            XML element
+        meshes : dict
+            dictionary of openmc.MeshBase instances. Can be any derived instance
+            the key is the id attributes
+
+        Returns
+        -------
+        openmc.MeshFilter
+            MeshFilter generated from XML element
+        """
+        
+        filter_id = int(get_text(elem, "id"))
+        mesh = meshes[int(get_text(elem, "bins").strip())]
+        filter_inst = cls(mesh, filter_id)
+        
+        return filter_inst
 
 
 class MeshSurfaceFilter(MeshFilter):
@@ -1281,6 +1348,26 @@ class EnergyFilter(RealFilter):
             cv.check_greater_than('filter value', v0, 0., equality=True)
             cv.check_greater_than('filter value', v1, 0., equality=True)
 
+    @classmethod
+    def from_xml_element(cls, elem):
+        """Generate Filter from an XML element
+
+        Parameters
+        ----------
+        elem : xml.etree.ElementTree.Element
+            XML element
+
+        Returns
+        -------
+        openmc.EnergyFilter
+            EnergyFilter generated from XML element
+        """
+        
+        filter_id = int(get_text(elem, "id"))
+        filter_bins = list(map(float, get_text(elem, "bins").strip().split()))
+        filter_inst = cls(filter_bins, filter_id)
+
+        return filter_inst
 
 class EnergyoutFilter(EnergyFilter):
     """Bins tally events based on outgoing particle energy.
@@ -1924,6 +2011,29 @@ class EnergyFunctionFilter(Filter):
         subelement.text = ' '.join(str(y) for y in self.y)
 
         return element
+
+    @classmethod
+    def from_xml_element(cls, elem):
+        """Generate EnergyFunctionFilter from an XML element
+
+        Parameters
+        ----------
+        elem : xml.etree.ElementTree.Element
+            XML element
+
+        Returns
+        -------
+        openmc.EnergyFunctionFilter
+            EnergyFunctionFilter generated from XML element
+        """
+        
+        filter_id = int(get_text(elem, "id"))
+        filter_energy = list(map(float, get_text(elem, "energy").strip().split()))
+        filter_y = list(map(float, get_text(elem, "y").strip().split()))
+
+        filter_inst = cls(filter_energy, filter_y, filter_id)
+
+        return filter_inst
 
     def can_merge(self, other):
         return False

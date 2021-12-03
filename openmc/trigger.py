@@ -4,7 +4,7 @@ from xml.etree import ElementTree as ET
 
 import openmc.checkvalue as cv
 from .mixin import EqualityMixin
-
+from ._xml import get_text
 
 class Trigger(EqualityMixin):
     """A criterion for when to finish a simulation based on tally uncertainties.
@@ -89,3 +89,30 @@ class Trigger(EqualityMixin):
         subelement.set("threshold", str(self._threshold))
         if len(self._scores) != 0:
             subelement.set("scores", ' '.join(map(str, self._scores)))
+
+    @classmethod
+    def from_xml_element(cls, elem):
+        """Generate Trigger from an XML element
+
+        Parameters
+        ----------
+        elem : xml.etree.ElementTree.Element
+            XML element
+
+        Returns
+        -------
+        openmc.Trigger
+            Trigger generated from XML element
+
+        """
+
+        trigger_type = get_text(elem, 'type')
+        threshold = get_text(elem, 'threshold')
+
+        trigger = cls(trigger_type, threshold)
+
+        scores = elem.find("scores")
+        if scores is not None:
+            trigger.scores = scores.text.strip().split()
+
+        return trigger

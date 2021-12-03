@@ -3,6 +3,7 @@ from xml.etree import ElementTree as ET
 
 import openmc.checkvalue as cv
 from .mixin import EqualityMixin, IDManagerMixin
+from ._xml import get_text
 
 
 class TallyDerivative(EqualityMixin, IDManagerMixin):
@@ -105,3 +106,29 @@ class TallyDerivative(EqualityMixin, IDManagerMixin):
         if self.variable == 'nuclide_density':
             element.set("nuclide", self.nuclide)
         return element
+
+    @classmethod
+    def from_xml_element(cls, elem):
+        """Generate derivative from an XML element
+
+        Parameters
+        ----------
+        elem : xml.etree.ElementTree.Element
+            XML element
+
+        Returns
+        -------
+        openmc.TallyDerivative
+            TallyDerivative generated from XML element
+
+        """
+
+        derivative_id = int(get_text(elem, 'id'))
+        derivative = cls(derivative_id)
+
+        derivative.variable = get_text(elem, 'variable')
+        derivative.material = int(get_text(elem, 'material'))
+        if derivative.variable == 'nuclide_density':
+            derivative.nuclide = get_text(elem, 'nuclide')
+
+        return derivative
