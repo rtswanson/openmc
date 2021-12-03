@@ -1427,7 +1427,10 @@ class HexLattice(Lattice):
 
         # Export the Lattice cell pitch
         pitch = ET.SubElement(lattice_subelement, "pitch")
-        pitch.text = ' '.join(map(str, self._pitch))
+        if self.ndim != 3 and len(self._pitch) == 2:
+            pitch.text = ' '.join(map(str, self._pitch[0:1]))
+        else:
+            pitch.text = ' '.join(map(str, self._pitch))
 
         # Export the Lattice outer Universe (if specified)
         if self._outer is not None:
@@ -1445,7 +1448,10 @@ class HexLattice(Lattice):
 
         # Export Lattice cell center
         center = ET.SubElement(lattice_subelement, "center")
-        center.text = ' '.join(map(str, self._center))
+        if self.ndim != 3 and len(self._center) == 3:
+            center.text = ' '.join(map(str, self._center[0:2]))
+        else:
+            center.text = ' '.join(map(str, self._center))
 
         # Export the Lattice nested Universe IDs.
 
@@ -1578,6 +1584,7 @@ class HexLattice(Lattice):
 
                         # Check if we've reached the bottom
                         if y == -n_rings:
+                            j+=1
                             break
 
                         while not lat.is_valid_index((alpha, y, z)):

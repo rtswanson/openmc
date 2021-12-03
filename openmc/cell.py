@@ -299,6 +299,8 @@ class Cell(IDManagerMixin):
         if self._rotation.ndim == 2:
             # User specified rotation matrix directly
             self._rotation_matrix = self._rotation
+        elif self.rotation.size == 9:
+            self._rotation_matrix = self.rotation.reshape(3,3)
         else:
             phi, theta, psi = self.rotation*(-pi/180.)
             c3, s3 = cos(phi), sin(phi)
@@ -634,6 +636,9 @@ class Cell(IDManagerMixin):
         if self.rotation is not None:
             element.set("rotation", ' '.join(map(str, self.rotation.ravel())))
 
+        if self.volume is not None:
+            element.set("volume", str(self.volume))
+
         return element
 
     @classmethod
@@ -687,10 +692,13 @@ class Cell(IDManagerMixin):
                 c.temperature = [float(t_i) for t_i in t.split()]
             else:
                 c.temperature = float(t)
-        for key in ('temperature', 'rotation', 'translation'):
+        for key in ('temperature', 'rotation', 'translation', 'volume'):
             value = get_text(elem, key)
             if value is not None:
-                setattr(c, key, [float(x) for x in value.split()])
+                if key == "volume":
+                    setattr(c, key, float(value))
+                else:
+                    setattr(c, key, [float(x) for x in value.split()])
 
         # Add this cell to appropriate universe
         univ_id = int(get_text(elem, 'universe', 0))
